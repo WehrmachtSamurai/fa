@@ -63,6 +63,9 @@ local upgradesTo = false
 local allowOthers = true
 
 function setIdRelations(idRelations_, upgradeKey_)
+    WARN('Construction.lua setIdRelations called from label init')
+    LOG(repr(idRelations_))
+    LOG(repr(upgradeKey_))
     idRelations = idRelations_
     upgradeKey = upgradeKey_
 end
@@ -1096,7 +1099,7 @@ function OnRolloverHandler(button, state)
         else
             UnitViewDetail.Hide()
         end
-    
+
 end
 
 function OnClickHandler(button, modifiers)
@@ -1798,7 +1801,7 @@ function FormatData(unitData, type)
 
         -- get function for checking for restricted units
         local IsRestricted = import('/lua/game.lua').IsRestricted
-        
+
         -- This section adds the arrows in for a build icon which is an upgrade from the
         -- selected unit. If there is an upgrade chain, it will display them split by arrows.
         -- I'm excluding Factories from this for now, since the chain of T1 -> T2 HQ -> T3 HQ
@@ -1806,7 +1809,7 @@ function FormatData(unitData, type)
         -- looks up, stores, and executes the upgrade chain. This needs doing for 3654.
         local unitSelected = sortedOptions.selection[1]
         local isStructure = EntityCategoryContains(categories.STRUCTURE - categories.FACTORY, unitSelected)
-                
+
         for i, units in sortedUnits do
             table.sort(units, SortFunc)
             local index = i
@@ -1814,16 +1817,16 @@ function FormatData(unitData, type)
                 if table.getn(retData) > 0 then
                     table.insert(retData, { type = 'spacer' })
                 end
-                
+
                 for index, unit in units do
                     -- show UI data/icons only for not restricted units
-                    
+
                     local restrict = false
                     if not IsRestricted(unit, GetFocusArmy()) then
-                        local bp = __blueprints[unit] 
+                        local bp = __blueprints[unit]
                         -- check if upgradeable structure
                         if isStructure and
-                                bp and bp.General and 
+                                bp and bp.General and
                                 bp.General.UpgradesFrom and
                                 bp.General.UpgradesFrom ~= 'none' then
 
@@ -2564,12 +2567,12 @@ function MoveItemInQueue(queue, indexfrom, indexto)
     modified = true
     local moveditem = queue[indexfrom]
     if indexfrom < indexto then
-        --take indexfrom out and shunt all indices from indexfrom to indexto up one
+        -- Take indexfrom out and shunt all indices from indexfrom to indexto up one
         for i = indexfrom, (indexto - 1) do
             queue[i] = queue[i + 1]
         end
     elseif indexfrom > indexto then
-        --take indexfrom out and shunt all indices from indexto to indexfrom down one
+        -- Take indexfrom out and shunt all indices from indexto to indexfrom down one
         for i = indexfrom, (indexto + 1), -1 do
             queue[i] = queue[i - 1]
         end
@@ -2577,20 +2580,21 @@ function MoveItemInQueue(queue, indexfrom, indexto)
     queue[indexto] = moveditem
     modifiedQueue = queue
     currentCommandQueue = queue
-    --update buttons in the UI
+
+    -- Update buttons in the UI
     SetSecondaryDisplay('buildQueue')
 end
 
 function UpdateBuildList(newqueue, from)
-    --The way this does this is UGLY but I can only find functions to remove things from the build queue and to add them at the end
-    --Thus the only way I can see to modify the build queue is to delete it back to the point it is modified from (the from argument) and then
-    --add the modified version back in. Unfortunately this causes a momentary 'skip' in the displayed build cue as it is deleted and replaced
+    -- The way this does this is UGLY but I can only find functions to remove things from the build queue and to add them at the end
+    -- Thus the only way I can see to modify the build queue is to delete it back to the point it is modified from (the from argument) and then
+    -- add the modified version back in. Unfortunately this causes a momentary 'skip' in the displayed build cue as it is deleted and replaced
 
     for i = table.getn(oldQueue), from, -1 do
         DecreaseBuildCountInQueue(i, oldQueue[i].count)
     end
     for i = from, table.getn(newqueue) do
-        blueprint = __blueprints[newqueue[i].id]
+        local blueprint = __blueprints[newqueue[i].id]
         if blueprint.General.UpgradesFrom == 'none' then
             IssueBlueprintCommand("UNITCOMMAND_BuildFactory", newqueue[i].id, newqueue[i].count)
         else
@@ -2608,22 +2612,23 @@ end
 function ButtonReleaseCallback()
     if dragging == true then
         PlaySound(Sound({ Cue = "UI_MFD_Click", Bank = "Interface" }))
-        --don't update the queue next time round, to avoid a list of 0 builds
+        -- Don't update the queue next time round, to avoid a list of 0 builds
         updateQueue = false
-        --disable dragging until the queue is rebuilt
+        -- Disable dragging until the queue is rebuilt
         dragLock = true
-        --reset modified so buildcount increasing can be used again
+        -- Reset modified so buildcount increasing can be used again
         modified = false
-        --mouse button released so end drag
+        -- Mouse button released so end drag
         dragging = false
+        local first_modified_index
         if originalIndex <= index then
             first_modified_index = originalIndex
         else
             first_modified_index = index
         end
-        --on the release of the mouse button we want to update the ACTUAL build queue that the factory does. So far, only the UI has been changed,
+        -- On the release of the mouse button we want to update the ACTUAL build queue that the factory does. So far, only the UI has been changed,
         UpdateBuildList(modifiedQueue, first_modified_index)
-        --nothing is now selected
+        -- Nothing is now selected
         index = nil
     end
 end
